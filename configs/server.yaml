@@ -1,0 +1,70 @@
+# 默认配置：服务器 GPU + 1.7B ASR；本地验证请显式用 configs/local.yaml
+paths:
+  input_dir: ../data/SIP
+  work_root: ../work
+  output_root: ../out
+  model_dir: ../models
+  template_path: ../说话声纹.json
+
+run:
+  device: cuda:0
+  dtype: bfloat16
+  max_attempts: 3
+  retry_backoff_s: 5
+  fake_models: false
+  cleanup_audio_after_export: true   # 导出后删掉该文件的整段/片段 WAV，只留 state.db；重跑时按需恢复
+
+decode:
+  sample_rate: 16000
+
+vad:
+  model_subdir: FireRedVAD
+  model_name: FireRedVAD
+  speech_threshold: 0.4
+  min_speech_ms: 350
+  min_silence_ms: 300
+  max_segment_s: 20
+  pad_ms: 50
+  window_s: 600
+  context_s: 20
+
+aed:
+  enabled: true              # 逐帧保留 speech，剔除 singing/music（BGM 歌词）
+  model_subdir: FireRedVAD/AED
+  speech_threshold: 0.4
+  min_speech_ms: 300
+  merge_gap_ms: 800          # 间隔不超过该值、且间隔内无歌声时合并相邻短句
+  max_merged_s: 12           # 合并后的最长片段
+  singing_threshold: 0.5     # 间隔内歌声概率达到该值就不合并（防 BGM 歌词混入）
+  pad_ms: 50
+
+sv:
+  model_subdir: campplus
+  model_name: iic/speech_campplus_sv_zh-cn_16k-common
+  threshold: 0.4
+  asr_min_score: 0.30
+  batch_size: 64
+
+asr:
+  model_subdir: Qwen3-ASR-1.7B
+  model_name: Qwen3-ASR-1.7B
+  batch_size: 16
+  language: Chinese
+  max_new_tokens: 256
+
+noise:
+  model_subdir: NoisySpeechDetection
+  model_name: Etherll/NoisySpeechDetection-v0.2
+  batch_size: 32
+  threshold: 0.5
+
+export:
+  format: zip                # zip = 每录音一个 zip（FLAC + manifest.json + segments.jsonl）；json = 旧版内嵌 WAV
+  schema_version: "2.0"
+  drop_empty_text: true
+  include_scores: true
+  drop_fillers: true          # 丢弃孤立的"嗯/啊/好的/OK"等填充词短句
+  filler_max_s: 1.2           # 只在这个时长以内按填充词处理
+  filler_texts: ["嗯","恩","啊","哦","噢","喔","呃","额","唉","诶","哎","喂",
+                 "好","好的","好吧","好嘞","好滴","对","对的","是","是的","行","OK","okay"]
+  min_asr_conf: -7.0          # token 平均 logprob 低于该值的片段不导出；null=关闭

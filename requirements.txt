@@ -1,0 +1,39 @@
+# 本地用 Python 3.11（Windows 上已验证）
+# 模型依赖较重，建议先装 torch/torchaudio，再装本文件
+torch>=2.6
+torchaudio
+numpy
+soundfile
+librosa
+pyyaml
+psutil
+tqdm
+pytest
+
+# VAD
+fireredvad==0.0.2
+kaldiio
+kaldi-native-fbank
+textgrid
+
+# 声纹（pipeline 运行时模型侧还会用到以下 modelscope 可选依赖）
+modelscope>=1.20
+addict
+simplejson
+sortedcontainers
+attrs
+einops
+python-dateutil
+scipy
+Pillow
+
+# ASR：官方包固定 transformers==4.57.6，Windows 上 sox/gradio 装不上时用 --no-deps
+transformers==4.57.6
+accelerate==1.12.0
+qwen-asr==0.0.6
+nagisa==0.2.11
+soynlp==0.0.493
+qwen-omni-utils
+
+# 噪音分类（HF 镜像）
+huggingface_hub
