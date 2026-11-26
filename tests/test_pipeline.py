@@ -75,6 +75,7 @@ def test_end_to_end_and_validate(wav_input):
     assert manifest["audio_format"] == "flac/16000/1/16bit"
     assert manifest["segment_count"] == len(segs) == 2
     assert [round(s["start_s"], 2) for s in segs] == [0.5, 3.5]
+    assert [s["start_s"] for s in segs] == sorted(s["start_s"] for s in segs)
     assert all(s["asr_text"].startswith("测试文本") for s in segs)
     assert all(s["noisy"] in (0, 1) for s in segs)
     assert all(0.99 <= s["sv_score"] <= 1.0 for s in segs)
@@ -89,6 +90,7 @@ def test_end_to_end_and_validate(wav_input):
     assert len(lines) == 2
     assert {x["archive"] for x in lines} == {out.name}
     assert all(x["audio_file"] == "直播 测试.wav" for x in lines)
+    assert [x["start_s"] for x in lines] == sorted(x["start_s"] for x in lines)
     meta = json.loads((out_dir / "index.meta.json").read_text(encoding="utf-8"))
     assert (meta["file_count"], meta["segment_count"]) == (1, 2)
 

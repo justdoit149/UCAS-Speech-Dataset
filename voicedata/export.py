@@ -279,7 +279,7 @@ def _write_text_atomic(path: Path, text: str) -> None:
 
 def _rebuild_index(out_dir: Path, cfg, job: str, schema_version: str) -> dict:
     """从 out 目录下所有 zip 的 segments.jsonl 重建全局索引。"""
-    lines: list[str] = []
+    entries: list[tuple[str, float, str]] = []  # (audio_file, start_s, index line)
     file_count = 0
     segment_count = 0
     for zpath in sorted(out_dir.glob("*.zip")):
@@ -305,8 +305,19 @@ def _rebuild_index(out_dir: Path, cfg, job: str, schema_version: str) -> dict:
                 logger.warning("索引跳过无法解析的行：%s：%s", zpath.name, exc)
                 continue
             line = {"audio_file": audio_file, "archive": zpath.name, **seg}
-            lines.append(json.dumps(line, ensure_ascii=False))
+            try:
+                start = float(seg.get("start_s", 0.0))
+            except (TypeError, ValueError):
+                start = 0.0
+            entries.append((audio_file, start, json.dumps(line, ensure_ascii=False)))
             segment_count += 1
+
+    # 同一录音内按时间升序；不同录音保持 zip 文件名顺序，避免把各录音的时间轴混在一起
+    file_rank: dict[str, int] = {}
+    for audio_file, _, _ in entries:
+        file_rank.setdefault(audio_file, len(file_rank))
+    entries.sort(key=lambda item: (file_rank[item[0]], item[1]))
+    lines = [item[2] for item in entries]
 
     _write_text_atomic(out_dir / INDEX_NAME,
                        "\n".join(lines) + ("\n" if lines else ""))
@@ -406,6 +417,10 @@ def run_export(
                 continue
             # 清理后的 work 里没有片段 WAV；先收集，写 zip 前再统一按需恢复
             written_rows.append((row, text))
+
+        # 输出必须按原音频时间升序，不依赖上游查询/过滤后的巧合顺序
+        written_rows.sort(key=lambda item: (
+            float(item[0]["start_s"]), float(item[0]["end_s"])))
 
         suffix = ".zip" if fmt == FORMAT_ZIP else ".json"
         out_path = out_dir / f"{frow['stem']}{suffix}"

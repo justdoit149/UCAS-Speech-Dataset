@@ -40,7 +40,7 @@ _PAGE = """<!doctype html>
     <span id="thv" class="ratio">{threshold:.2f}</span></label>
   <span id="count" class="ratio"></span>
   <button id="csv">导出标注 CSV</button>
-  <span class="meta">共 {n} 段（按与阈值接近程度抽样）；标注仅保存在当前页面</span>
+  <span class="meta">共 {n} 段（按时间顺序展示；抽样优先选与阈值接近的片段）；标注仅保存在当前页面</span>
 </div>
 <div id="list">
 {cards}
@@ -179,8 +179,15 @@ def _collect(out_dir: Path, sample: int, threshold: float, pattern: str | None) 
         needle = pattern.lower()
         items = [d for d in items if needle in d["file"].lower()
                  or needle in d["archive"].lower()]
+    # 抽样仍优先挑与阈值接近的片段，但展示顺序按原音频的时间先后
+    file_rank = {}
+    for d in items:
+        file_rank.setdefault(d["file"], len(file_rank))
     items.sort(key=lambda d: abs(d["score"] - threshold))
-    return items[:sample] if sample and sample > 0 else items
+    selected = items[:sample] if sample and sample > 0 else items
+    selected.sort(key=lambda d: (
+        file_rank.get(d["file"], 0), d["start"], d["end"], d["archive"]))
+    return selected
 
 
 def _audio_b64(item: dict, out_dir: Path) -> str | None:

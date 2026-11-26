@@ -124,7 +124,7 @@ zip 内部：
 - `noisy`：1 表示有背景杂音，BGM 也算；`noise_prob` 为对应概率。
 - `asr_conf`：token 平均 logprob，越低越不可信；缺失表示旧数据或模型未返回。
 - `sv_score`、`noise_prob` 仅在 `export.include_scores: true` 时输出。
-- 片段按 `start_s` 升序，同一录音内不重叠。
+- `segments.jsonl` 与 `index.jsonl` 中，同一录音的片段按 `start_s` 升序，同一录音内不重叠；不同录音按 zip 文件名分组。
 
 旧版单 JSON（`audio_base64` 内嵌 WAV）仍可通过 `export.format: json` 生成；该模式不生成索引，`validate`/`inspect` 仍能读取旧 `.json`。
 
@@ -230,7 +230,7 @@ python -m voicedata validate --job sandpaper-20241223
 python -m voicedata inspect --job sandpaper-20241223 --sample 80
 ```
 
-`calibration.html` 支持播放、按 SV/置信度查看片段，并可导出 CSV。
+`calibration.html` 支持播放、按 SV/置信度查看片段，并可导出 CSV。页面按原音频时间顺序展示；`--sample N` 仍优先抽取与阈值接近的片段。
 
 ## 配置要点
 
